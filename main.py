@@ -9,7 +9,9 @@ import pandas as pd
 PAY_SCALE_URI = "https://www.payscale.com/college-salary-report/majors-that-pay-you-back/bachelors"
 
 
+# Create soup object
 def request_pyscale_data(url: str, page=None) -> object:
+    """This function will return an object for the soup."""
     if page:
         url = url + f"/page/{page}"
     pay_scale_data_request = requests.get(url)
@@ -31,6 +33,7 @@ def pay_scale_pages_numbers(data: object) -> dict:
     return {"first page": first_page, "last page": last_page}
 
 
+# create a data collection form a pay scale website
 def data_collections(data: object) -> dict:
     ranks = [re.findall(r"\d+", rank.get_text())[0] for rank in data.find_all("td", "csr-col--rank")]
     majors = [re.findall(r":\w+", major.get_text())[0].lstrip(":") for major in
@@ -65,6 +68,7 @@ def pay_scale_columns(data: object) -> list:
     return data_columns
 
 
+# save data as json
 def save_data(data: dict):
     if os.path.isfile("pyscale_data.json"):
         # Update the current json file
@@ -84,7 +88,8 @@ def save_data(data: dict):
             json.dump(data, data_file, indent=4)
 
 
-def collect_and_save_payscale():
+# Run all the previous steps to create a full json file that includes the full table data
+def run_pay_scale_scraping_app():
     data = request_pyscale_data(PAY_SCALE_URI)
     save_data(data_collections(data))
     pages_range = pay_scale_pages_numbers(data)
@@ -96,8 +101,8 @@ def collect_and_save_payscale():
         save_data(data_collections(update_data))
 
 
+# convert the json file to csv
 def convert_json_to_csv(json_file):
     df = pd.read_json(json_file)
     file_name = Path(json_file).stem
     df.to_csv(f"{file_name}.csv", index=None)
-
