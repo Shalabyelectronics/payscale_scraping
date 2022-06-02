@@ -11,7 +11,7 @@ PAY_SCALE_URI = "https://www.payscale.com/college-salary-report/majors-that-pay-
 
 # Create soup object
 def request_pyscale_data(url: str, page=None) -> object:
-    """This function will return an object for the soup."""
+    """This function will return an object for the requested page soup."""
     if page:
         url = url + f"/page/{page}"
     pay_scale_data_request = requests.get(url)
