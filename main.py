@@ -10,7 +10,7 @@ PAY_SCALE_URI = "https://www.payscale.com/college-salary-report/majors-that-pay-
 
 
 # Create soup object
-def request_pyscale_data(url: str, page=None) -> object:
+def request_payscale_data(url: str, page=None) -> object:
     """This function will return an object for the requested page soup."""
     if page:
         url = url + f"/page/{page}"
@@ -25,7 +25,7 @@ def request_pyscale_data(url: str, page=None) -> object:
 
 # Get All Pages numbers
 def pay_scale_pages_numbers(data: object) -> dict:
-    """Get the first and last page from a pyscale table"""
+    """Get the first and last page from a payscale data table"""
     all_table_pages = [int(number.text) for number in data.find_all("div", "pagination__btn--inner") if
                        number.text.isdigit()]
     first_page = min(all_table_pages)
@@ -35,6 +35,7 @@ def pay_scale_pages_numbers(data: object) -> dict:
 
 # create a data collection form a pay scale website
 def data_collections(data: object) -> dict:
+    """Will get all main data and arrange it in a dictionary"""
     ranks = [re.findall(r"\d+", rank.get_text())[0] for rank in data.find_all("td", "csr-col--rank")]
     majors = [re.findall(r":\w+", major.get_text())[0].lstrip(":") for major in
               data.find_all("td", "csr-col--school-name")]
@@ -70,9 +71,10 @@ def pay_scale_columns(data: object) -> list:
 
 # save data as json
 def save_data(data: dict):
-    if os.path.isfile("pyscale_data.json"):
+    """Save pay scale data that sending from data_collection function"""
+    if os.path.isfile("payscale_data.json"):
         # Update the current json file
-        with open("pyscale_data.json") as data_file:
+        with open("payscale_data.json") as data_file:
             data_content = json.load(data_file)
             data_content["Ranks"].extend(data["Ranks"])
             data_content["High Meaning"].extend(data["High Meaning"])
@@ -80,29 +82,36 @@ def save_data(data: dict):
             data_content["School Types"].extend(data["School Types"])
             data_content["Early Pay"].extend(data["Early Pay"])
             data_content["Mid Career Pay"].extend(data["Mid Career Pay"])
-        with open("pyscale_data.json", mode="w") as data_file:
+        with open("payscale_data.json", mode="w") as data_file:
             json.dump(data_content, data_file, indent=4)
     else:
         # create a new file
-        with open("pyscale_data.json", mode="w") as data_file:
+        with open("payscale_data.json", mode="w") as data_file:
             json.dump(data, data_file, indent=4)
+    return "payscale_data.json"
+
+
+# convert the json file to csv
+def convert_json_to_csv(json_file: str):
+    """Covert the Json file to a CSV file"""
+    df = pd.read_json(json_file)
+    file_name = Path(json_file).stem
+    df.to_csv(f"{file_name}.csv", index=None)
 
 
 # Run all the previous steps to create a full json file that includes the full table data
 def run_pay_scale_scraping_app():
-    data = request_pyscale_data(PAY_SCALE_URI)
-    save_data(data_collections(data))
+    data = request_payscale_data(PAY_SCALE_URI)
+    json_file_name = save_data(data_collections(data))
     pages_range = pay_scale_pages_numbers(data)
     first_page = pages_range["first page"] + 1
     last_page = pages_range["last page"] + 1
 
     for page_number in range(first_page, last_page):
-        update_data = request_pyscale_data(PAY_SCALE_URI, page=page_number)
+        update_data = request_payscale_data(PAY_SCALE_URI, page=page_number)
         save_data(data_collections(update_data))
+    convert_json_to_csv(json_file_name)
 
 
-# convert the json file to csv
-def convert_json_to_csv(json_file):
-    df = pd.read_json(json_file)
-    file_name = Path(json_file).stem
-    df.to_csv(f"{file_name}.csv", index=None)
+if __name__ == "__main__":
+    run_pay_scale_scraping_app()
